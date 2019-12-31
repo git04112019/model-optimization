@@ -24,12 +24,14 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 
+# TODO(b/139939526): move to public API.
 from tensorflow.python.keras import keras_parameterized
+from tensorflow_model_optimization.python.core.keras import test_utils
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_impl
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_schedule
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_utils
 
-# TODO(b/139939526): move to public API.
+CompatHelper = test_utils.CompatHelper
 
 K = tf.keras.backend
 dtypes = tf.dtypes
@@ -44,7 +46,7 @@ def assign_add(ref, value):
 
 
 @keras_parameterized.run_all_keras_modes
-class PruningTest(test.TestCase, parameterized.TestCase):
+class PruningTest(test.TestCase, parameterized.TestCase, CompatHelper):
 
   def setUp(self):
     super(PruningTest, self).setUp()
@@ -69,9 +71,7 @@ class PruningTest(test.TestCase, parameterized.TestCase):
       return self.global_step
     self.training_step_fn = training_step_fn
 
-    if hasattr(tf,
-               "global_variables_initializer") and not tf.executing_eagerly():
-      self.evaluate(tf.global_variables_initializer())
+    self._initialize_variables()
 
   def testUpdateSingleMask(self):
     weight = tf.Variable(np.linspace(1.0, 100.0, 100), name="weights")

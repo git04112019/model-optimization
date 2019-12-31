@@ -21,6 +21,18 @@ import tensorflow as tf
 l = tf.keras.layers
 
 
+class CompatHelper(object):
+  """Mixin with helper functions for TF v1/v2 compatibility.
+
+  Needs to be used with tf.test.TestCase.
+  """
+
+  def _initialize_variables(self):
+    if hasattr(tf,
+               'global_variables_initializer') and not tf.executing_eagerly():
+      self.evaluate(tf.global_variables_initializer())
+
+
 def build_simple_dense_model():
   return tf.keras.Sequential([
       l.Dense(8, activation='relu', input_shape=(10,)),

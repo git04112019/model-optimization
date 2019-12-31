@@ -21,13 +21,9 @@ py_library(
     srcs = ["quant_ops.py"],
     srcs_version = "PY2AND3",
     deps = [
-        # python:array_ops tensorflow dep2,
-        # python:framework_ops tensorflow dep2,
-        # python:init_ops tensorflow dep2,
-        # python:math_ops tensorflow dep2,
-        # python:state_ops tensorflow dep2,
+        # tensorflow dep1,
         # python:training tensorflow dep2,
-        # python:variable_scope tensorflow dep2,
+        "//tensorflow_model_optimization/python/core/keras:compat",
     ],
 )
 
@@ -38,14 +34,8 @@ py_test(
     srcs_version = "PY2AND3",
     deps = [
         ":quant_ops",
-        # python:array_ops tensorflow dep2,
-        # python:dtypes tensorflow dep2,
-        # python:framework_ops tensorflow dep2,
-        # python:partitioned_variables tensorflow dep2,
-        # python:platform_test tensorflow dep2,
-        # python:session tensorflow dep2,
-        # python:variable_scope tensorflow dep2,
-        # python:variables tensorflow dep2,
+        # tensorflow dep1,
+        "//tensorflow_model_optimization/python/core/keras:test_utils",
     ],
 )
 
@@ -76,11 +66,7 @@ py_test(
         # absl/testing:parameterized dep1,
         # numpy dep1,
         # tensorflow dep1,
-        # python:dtypes tensorflow dep2,
-        # python:framework_ops tensorflow dep2,
-        # python:platform_test tensorflow dep2,
-        # python:session tensorflow dep2,
-        # python:variables tensorflow dep2,
+        "//tensorflow_model_optimization/python/core/keras:test_utils",
     ],
 )
 
@@ -133,7 +119,6 @@ py_library(
     deps = [
         ":quantize_provider",
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
     ],
 )
 
@@ -150,7 +135,6 @@ py_test(
         ":quantize_provider",
         # numpy dep1,
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
     ],
 )
 
@@ -164,7 +148,6 @@ py_library(
     deps = [
         ":quant_ops",
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
     ],
 )
 
@@ -181,7 +164,6 @@ py_test(
         ":quantizers",
         # numpy dep1,
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
     ],
 )
 
@@ -197,7 +179,6 @@ py_library(
         ":quantize_provider",
         ":quantizers",
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
     ],
 )
 
@@ -215,7 +196,6 @@ py_test(
         # absl/testing:parameterized dep1,
         # numpy dep1,
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
         "//tensorflow_model_optimization/python/core/quantization/keras/tflite:tflite_quantize_registry",
     ],
 )
@@ -231,7 +211,6 @@ py_library(
         ":quantize_annotate",
         ":quantize_wrapper",
         # tensorflow dep1,
-        # python/keras tensorflow dep2,
         "//tensorflow_model_optimization/python/core/quantization/keras/layers:conv_batchnorm",
         "//tensorflow_model_optimization/python/core/quantization/keras/tflite:tflite_quantize_layout_transform",
         "//tensorflow_model_optimization/python/core/quantization/keras/tflite:tflite_quantize_registry",
@@ -288,6 +267,8 @@ py_test(
     size = "large",
     srcs = ["quantize_functional_test.py"],
     python_version = "PY2",
+    # To match parallel runs of run_all_keras_modes.
+    shard_count = 4,
     deps = [
         ":quantize",
         ":utils",

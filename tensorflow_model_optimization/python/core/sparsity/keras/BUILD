@@ -76,6 +76,7 @@ py_test(
         # absl/testing:parameterized dep1,
         # tensorflow dep1,
         # python/keras tensorflow dep2,
+        "//tensorflow_model_optimization/python/core/keras:test_utils",
     ],
 )
 
@@ -134,6 +135,7 @@ py_library(
         ":pruning_utils",
         # tensorflow dep1,
         # python:summary tensorflow dep2,
+        "//tensorflow_model_optimization/python/core/keras:compat",
     ],
 )
 
@@ -282,5 +284,6 @@ py_test(
         ":pruning_utils",
         # absl/testing:parameterized dep1,
         # tensorflow dep1,
+        "//tensorflow_model_optimization/python/core/keras:test_utils",
     ],
 )

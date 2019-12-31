@@ -26,13 +26,14 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.python.platform import test
+from tensorflow.python.keras import keras_parameterized
 
 from tensorflow_model_optimization.python.core.quantization.keras import quantize
 from tensorflow_model_optimization.python.core.quantization.keras import utils
 
 
-class QuantizeModelsTest(test.TestCase, parameterized.TestCase):
+@keras_parameterized.run_all_keras_modes(always_skip_v1=True)
+class QuantizeModelsTest(tf.test.TestCase, parameterized.TestCase):
 
   # Derived using
   # `inspect.getmembers(tf.keras.applications, inspect.isfunction)`
@@ -124,4 +125,4 @@ class QuantizeModelsTest(test.TestCase, parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  test.main()
+  tf.test.main()

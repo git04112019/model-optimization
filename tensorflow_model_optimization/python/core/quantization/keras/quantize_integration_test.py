@@ -25,15 +25,19 @@ from absl.testing import parameterized
 import numpy as np
 import tensorflow as tf
 
-from tensorflow.python import keras
-from tensorflow.python.platform import test
+# TODO(b/139939526): move to public API.
+from tensorflow.python.keras import keras_parameterized
 
 from tensorflow_model_optimization.python.core.keras import test_utils
 from tensorflow_model_optimization.python.core.quantization.keras import quantize
 from tensorflow_model_optimization.python.core.quantization.keras import utils
 
 
-class QuantizeIntegrationTest(test.TestCase, parameterized.TestCase):
+# TODO(tfmot): enable for v1. Currently fails because the decorator
+# on graph mode wraps everything in a graph, which is not compatible
+# with the TFLite converter's call to clear_session().
+@keras_parameterized.run_all_keras_modes(always_skip_v1=True)
+class QuantizeIntegrationTest(tf.test.TestCase, parameterized.TestCase):
 
   @staticmethod
   def _batch(dims, batch_size):
@@ -74,12 +78,12 @@ class QuantizeIntegrationTest(test.TestCase, parameterized.TestCase):
         batch_size=20)
 
     _, model_file = tempfile.mkstemp('.h5')
-    keras.models.save_model(quantized_model, model_file)
+    tf.keras.models.save_model(quantized_model, model_file)
     with quantize.quantize_scope():
-      loaded_model = keras.models.load_model(model_file)
+      loaded_model = tf.keras.models.load_model(model_file)
 
     self._assert_models_equal(quantized_model, loaded_model)
 
 
 if __name__ == '__main__':
-  test.main()
+  tf.test.main()
