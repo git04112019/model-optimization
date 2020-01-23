@@ -18,13 +18,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import tempfile
+
 import numpy as np
+import tensorflow as tf
 
-from tensorflow.python import keras
-from tensorflow.python.keras import backend as K
-from tensorflow.python.keras.utils import generic_utils
-from tensorflow.python.platform import test
-
+from tensorflow_model_optimization.python.core.keras import test_utils as keras_test_utils
 from tensorflow_model_optimization.python.core.quantization.keras import quantize
 from tensorflow_model_optimization.python.core.quantization.keras import quantize_annotate as quantize_annotate_mod
 from tensorflow_model_optimization.python.core.quantization.keras import quantize_provider as quantize_provider_mod
@@ -35,6 +34,13 @@ quantize_annotate = quantize.quantize_annotate
 quantize_apply = quantize.quantize_apply
 QuantizeAnnotate = quantize_annotate_mod.QuantizeAnnotate
 QuantizeWrapper = quantize_wrapper_mod.QuantizeWrapper
+quantize_scope = quantize.quantize_scope
+
+keras = tf.keras
+K = tf.keras.backend
+custom_object_scope = tf.keras.utils.custom_object_scope
+
+CompatHelper = keras_test_utils.CompatHelper
 
 
 class _TestQuantizeProvider(quantize_provider_mod.QuantizeProvider):
@@ -58,7 +64,7 @@ class _TestQuantizeProvider(quantize_provider_mod.QuantizeProvider):
     return {}
 
 
-class QuantizeAnnotateTest(test.TestCase):
+class QuantizeAnnotateTest(tf.test.TestCase):
 
   def _assertWrappedLayer(self, layer, quantize_provider=None):
     self.assertIsInstance(layer, quantize_annotate_mod.QuantizeAnnotate)
@@ -112,8 +118,16 @@ class QuantizeAnnotateTest(test.TestCase):
     inputs = np.random.rand(1, 5)
     self.assertAllEqual(model.predict(inputs), annotated_model.predict(inputs))
 
+  def testQuantizeAnnotateModel_RemovesOptimizer(self):
+    model = keras_test_utils.build_simple_dense_model()
+    model.compile(
+        loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+    self.assertIsNotNone(model.optimizer)
+    annotated_model = quantize_annotate(model)
+    self.assertIsNone(annotated_model.optimizer)
 
-class QuantizeApplyTest(test.TestCase):
+
+class QuantizeApplyTest(tf.test.TestCase):
 
   # Validation tests
 
@@ -195,6 +209,7 @@ class QuantizeApplyTest(test.TestCase):
     annotated_weights = _sort_weights(annotate_wrapper.trainable_weights)
     quantized_weights = _sort_weights(quantize_wrapper.trainable_weights)
 
+    # TODO(tfmot): separate different objects check into own unit test.
     # Quantized model should pick the same weight values from the original
     # model. However, they should not be the same weight objects. We don't
     # want training the quantized model to change weights in the original model.
@@ -222,7 +237,7 @@ class QuantizeApplyTest(test.TestCase):
     annotated_model = keras.Sequential([
         QuantizeAnnotate(self.CustomLayer(3), input_shape=(2,))])
 
-    with generic_utils.custom_object_scope({'CustomLayer': self.CustomLayer}):
+    with custom_object_scope({'CustomLayer': self.CustomLayer}):
       with self.assertRaises(RuntimeError):
         quantize_apply(annotated_model)
 
@@ -245,9 +260,10 @@ class QuantizeApplyTest(test.TestCase):
         QuantizeAnnotate(self.CustomLayer(3), input_shape=(2,),
                          quantize_provider=_TestQuantizeProvider())])
 
-    with generic_utils.custom_object_scope(
-        {'CustomLayer': self.CustomLayer,
-         '_TestQuantizeProvider': _TestQuantizeProvider}):
+    with custom_object_scope({
+        'CustomLayer': self.CustomLayer,
+        '_TestQuantizeProvider': _TestQuantizeProvider
+    }):
       quantized_model = quantize_apply(annotated_model)
     quantized_layer = quantized_model.layers[0]
 
@@ -260,8 +276,7 @@ class QuantizeApplyTest(test.TestCase):
         QuantizeAnnotate(keras.layers.Dense(3), input_shape=(2,),
                          quantize_provider=_TestQuantizeProvider())])
 
-    with generic_utils.custom_object_scope(
-        {'_TestQuantizeProvider': _TestQuantizeProvider}):
+    with custom_object_scope({'_TestQuantizeProvider': _TestQuantizeProvider}):
       quantized_model = quantize_apply(annotated_model)
     quantized_layer = quantized_model.layers[0]
 
@@ -291,6 +306,92 @@ class QuantizeApplyTest(test.TestCase):
 
     self._assert_model_quantized(model, quantized_model, ['activation'])
 
+  def testQuantizeApply_RemovesOptimizer(self):
+    model = keras_test_utils.build_simple_dense_model()
+    annotated_model = quantize_annotate(model)
+    annotated_model.compile(
+        loss='categorical_crossentropy', optimizer='sgd', metrics=['accuracy'])
+    self.assertIsNotNone(annotated_model.optimizer)
+    quantized_model = quantize_apply(annotated_model)
+    self.assertIsNone(quantized_model.optimizer)
+
+
+class QuantizeScopeTest(tf.test.TestCase, CompatHelper):
+
+  def testQuantizeScope_NeededForKerasModel(self):
+    model = keras_test_utils.build_simple_dense_model()
+    quantized_model = quantize.quantize(model)
+
+    _, keras_model = tempfile.mkstemp('.h5')
+    quantized_model.save(keras_model)
+
+    with self.assertRaises(ValueError):
+      tf.keras.models.load_model(keras_model)
+
+    # works with `quantize_scope`
+    with quantize_scope():
+      tf.keras.models.load_model(keras_model)
+
+  def testQuantizeScope_NotNeededForKerasCheckpoint(self):
+    model = keras_test_utils.build_simple_dense_model()
+    quantized_model = quantize.quantize(model)
+
+    _, keras_weights = tempfile.mkstemp('.h5')
+    quantized_model.save_weights(keras_weights)
+
+    same_architecture_model = keras_test_utils.build_simple_dense_model()
+    same_architecture_model = quantize.quantize(same_architecture_model)
+
+    # would error if `quantize_scope` was needed.
+    same_architecture_model.load_weights(keras_weights)
+
+  def testQuantizeScope_NotNeededForTFCheckpoint(self):
+    model = keras_test_utils.build_simple_dense_model()
+    quantized_model = quantize.quantize(model)
+
+    _, tf_weights = tempfile.mkstemp('.tf')
+    quantized_model.save_weights(tf_weights)
+
+    same_architecture_model = keras_test_utils.build_simple_dense_model()
+    same_architecture_model = quantize.quantize(same_architecture_model)
+
+    # would error if `quantize_scope` was needed.
+    same_architecture_model.load_weights(tf_weights)
+
+  def testQuantizeScope_NotNeededForTF2SavedModel(self):
+    if self._is_v1_apis():
+      return
+
+    model = keras_test_utils.build_simple_dense_model()
+    quantized_model = quantize.quantize(model)
+
+    saved_model_dir = tempfile.mkdtemp()
+
+    tf.saved_model.save(quantized_model, saved_model_dir)
+
+    # would error if `quantize_scope` was needed.
+    tf.saved_model.load(saved_model_dir)
+
+  # TODO(tfmot): remove test if no plan for 1.X support ever.
+  def testQuantizeScope_NeededForTF1SavedModel(self):
+    if not self._is_v1_apis():
+      return
+
+    model = keras_test_utils.build_simple_dense_model()
+    quantized_model = quantize.quantize(model)
+
+    saved_model_dir = tempfile.mkdtemp()
+
+    with quantize_scope():
+      tf.keras.experimental.export_saved_model(quantized_model, saved_model_dir)
+
+    with self.assertRaises(ValueError):
+      tf.keras.experimental.load_from_saved_model(saved_model_dir)
+
+    # works with `quantize_scope`
+    with quantize_scope():
+      tf.keras.experimental.load_from_saved_model(saved_model_dir)
+
 
 if __name__ == '__main__':
-  test.main()
+  tf.test.main()

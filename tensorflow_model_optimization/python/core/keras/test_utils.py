@@ -60,12 +60,26 @@ class ModelCompare(object):
       self.assertNotAllClose(w1, w2)
 
 
+class CompatHelper(object):
+  """Mixin with helper functions for TF v1/v2 compatibility.
+
+  Needs to be used with tf.test.TestCase.
+  """
+
+  def _initialize_variables(self):
+    if hasattr(tf,
+               'global_variables_initializer') and not tf.executing_eagerly():
+      self.evaluate(tf.global_variables_initializer())
+
+  def _is_v1_apis(self):
+    return hasattr(tf, 'assign')
+
+
 def build_simple_dense_model():
   return tf.keras.Sequential([
       l.Dense(8, activation='relu', input_shape=(10,)),
       l.Dense(5, activation='softmax')
   ])
-
 
 def get_preprocessed_mnist_data(img_rows=28,
                                 img_cols=28,
