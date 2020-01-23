@@ -22,20 +22,18 @@ from __future__ import print_function
 from absl.testing import parameterized
 
 import tensorflow as tf
+from tensorflow_model_optimization.python.core.keras import test_utils
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_utils
 
 glorot_uniform_initializer = tf.keras.initializers.glorot_uniform
+CompatHelper = test_utils.CompatHelper
 
 
 @parameterized.named_parameters(
     ("1x1", [1, 1]), ("4x4", [4, 4]), ("6x6", [6, 6]), ("1x4", [1, 4]),
     ("4x1", [4, 1]), ("1x8", [1, 8]), ("8x1", [8, 1]))
-class PruningUtilsParameterizedTest(tf.test.TestCase, parameterized.TestCase):
-
-  def _initialize_variables(self):
-    if hasattr(tf,
-               "global_variables_initializer") and not tf.executing_eagerly():
-      self.evaluate(tf.global_variables_initializer())
+class PruningUtilsParameterizedTest(tf.test.TestCase, parameterized.TestCase,
+                                    CompatHelper):
 
   def _compare_pooling_methods(self, weights, pooling_kwargs):
     with self.cached_session():

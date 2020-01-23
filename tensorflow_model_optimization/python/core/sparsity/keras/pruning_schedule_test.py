@@ -19,19 +19,14 @@ import tensorflow as tf
 
 # TODO(b/139939526): move to public API.
 from tensorflow.python.keras import keras_parameterized
+from tensorflow_model_optimization.python.core.keras import test_utils
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_schedule
 
-
-class _Helper(object):
-  """Helper functions for pruning schedule test."""
-
-  def _initialize_variables(self):
-    if hasattr(tf,
-               'global_variables_initializer') and not tf.executing_eagerly():
-      self.evaluate(tf.global_variables_initializer())
+CompatHelper = test_utils.CompatHelper
 
 
-class PruningScheduleTest(_Helper, tf.test.TestCase, parameterized.TestCase):
+class PruningScheduleTest(tf.test.TestCase, parameterized.TestCase,
+                          CompatHelper):
   """Test to verify PruningSchedule behavior for step parameters.
 
   This is a parameterized test which runs over all PruningSchedule classes
@@ -220,7 +215,8 @@ class PruningScheduleTest(_Helper, tf.test.TestCase, parameterized.TestCase):
     self.assertTrue(self.evaluate(sparsity(step_110))[0])
 
 
-class ConstantSparsityTest(_Helper, tf.test.TestCase, parameterized.TestCase):
+class ConstantSparsityTest(tf.test.TestCase, parameterized.TestCase,
+                           CompatHelper):
 
   @keras_parameterized.run_all_keras_modes
   def testPrunesForeverIfEndStepIsNegativeOne(self):
@@ -263,7 +259,8 @@ class ConstantSparsityTest(_Helper, tf.test.TestCase, parameterized.TestCase):
     self.assertEqual(sparsity.__dict__, sparsity_deserialized.__dict__)
 
 
-class PolynomialDecayTest(_Helper, tf.test.TestCase, parameterized.TestCase):
+class PolynomialDecayTest(tf.test.TestCase, parameterized.TestCase,
+                          CompatHelper):
 
   def testRaisesErrorIfEndStepIsNegative(self):
     with self.assertRaises(ValueError):
